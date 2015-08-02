@@ -96,8 +96,8 @@ void loop()
     long minutes = accSecs / 60;
     long seconds = accSecs % 60;
 
-    //sprintf(tempString, "%02d%02d", minutes, seconds);
-    sprintf(tempString, "%04d", accSecs);
+    sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
+    //sprintf(tempString, "%04d", accSecs);
     s7s.print(tempString);
 
   } 
