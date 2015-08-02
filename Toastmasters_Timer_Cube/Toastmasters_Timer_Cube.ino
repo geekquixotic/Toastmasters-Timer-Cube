@@ -28,6 +28,10 @@ SoftwareSerial s7s(softwareRx, softwareTx);
 unsigned int counter = 0;  // This variable will count up to 65k
 char tempString[10];  // Will be used with sprintf to create strings
 
+// Other variables
+boolean Running = 0;
+long startTime;
+
 void timerIsr() {
   encoder->service();
 }
@@ -56,14 +60,19 @@ void setup()
   s7s.print("8888");  // Show all digit segments and...
   setDecimals(0b111111);  // Turn on all options
 
-  for(int x=1 ; x<3 ; x++) {
+  // Set initial Running state
+  Running = 0;
+
+  for(int x=1 ; x<4 ; x++) {
      showLED(x);
      delay(500);
   }
+  showLED(0);
 
+  startTime = millis();
   // Do as I say, not as I do
   //delay(500); // This is just test code so we can see the display light up
-  clearDisplay(); // Now let's get to work
+  //clearDisplay(); // Now let's get to work
   
 }
 
@@ -71,19 +80,51 @@ void loop()
 {
   
   // Check state (running or not)
+  if(Running)
+  {
+    setDecimals(0b00010000);
+    
+    long currentTime = millis();
+    // Increment time
+    // If manual mode, knob changes LED
+    // If preset mode, use time presets
+    // Button stops and changes to control mode
+    ClickEncoder::Button b = encoder->getButton();
+    if (b == ClickEncoder::Clicked) { Running = 0; }
+    
+    long accSecs = (currentTime - startTime) / 1000L;
+    long minutes = accSecs / 60;
+    long seconds = accSecs % 60;
 
-  // If not running
-  // Knob controls mode (manual, TT, EV, SS)
-  // Load timer presets
-  // Button starts timer
-  // Resets on hold
+    //sprintf(tempString, "%02d%02d", minutes, seconds);
+    sprintf(tempString, "%04d", accSecs);
+    s7s.print(tempString);
 
-  // If running
-  // Increment time
-  // If manual mode, knob changes LED
-  // If preset mode, use time presets
-  // Button stops and changes to control mode
-  
+  } 
+
+  else 
+
+  { // not running
+
+    // Knob controls mode (manual, TT, EV, SS)
+    // Load timer presets
+
+    // Button starts timer
+    ClickEncoder::Button b = encoder->getButton();
+    if (b == ClickEncoder::Clicked) 
+    { 
+      Running = 1;
+      startTime = millis();
+    }
+    // Resets on hold
+    if (b == ClickEncoder::Held) 
+    { 
+      startTime = millis(); 
+      s7s.print("0000");
+    }  
+  }
+
+/*  
   // Test code below  
   value += encoder->getValue();
   if (value != last) {
@@ -101,7 +142,8 @@ void loop()
     
     showLED(value % 4);
   }
-  
+*/
+
 }
 
 ////////////////
