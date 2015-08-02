@@ -99,6 +99,14 @@ void loop()
     sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
     //sprintf(tempString, "%04d", accSecs);
     s7s.print(tempString);
+    
+    // Just putting in raw code to manually light the lights
+    value += encoder->getValue();
+    if (value != last) 
+    {
+      last = value;
+      showLED(abs(value)%4);
+    }
 
   } 
 
