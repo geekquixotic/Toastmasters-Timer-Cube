@@ -6,19 +6,20 @@
 #define RED 8
 #define YELLOW 9
 #define GREEN 10
+#define NULL 11 // Nothing on the pin, but only to be position zero in the arrray
 
 // Define automatic time limits (in seconds)
 const int tableTopics[3] = {60, 90, 120};
 const int evaluation[3] = {120, 150, 180};
 const int stdSpeech[3] = {300, 360, 420};
-const int LEDArray[3] = {GREEN, YELLOW, RED};
+const int LEDArray[4] = {NULL, GREEN, YELLOW, RED};
 const char* myStrings[]={"0000", "1--2", "2--3", "5--7"};
 
 // Initiate Encoder
 ClickEncoder *encoder;
 int16_t last, value;
 
-// These are the Arduino pins required to create a software seiral
+// These are the Arduino pins required to create a software serial
 //  instance. We'll actually only use the TX pin.
 const int softwareTx = 12;
 const int softwareRx = 1; // Not in use, though
@@ -55,7 +56,7 @@ void setup()
   s7s.print("8888");  // Show all digit segments and...
   setDecimals(0b111111);  // Turn on all options
 
-  for(int x=0 ; x<3 ; x++) {
+  for(int x=1 ; x<3 ; x++) {
      showLED(x);
      delay(500);
   }
@@ -69,6 +70,21 @@ void setup()
 void loop()
 {
   
+  // Check state (running or not)
+
+  // If not running
+  // Knob controls mode (manual, TT, EV, SS)
+  // Load timer presets
+  // Button starts timer
+  // Resets on hold
+
+  // If running
+  // Increment time
+  // If manual mode, knob changes LED
+  // If preset mode, use time presets
+  // Button stops and changes to control mode
+  
+  // Test code below  
   value += encoder->getValue();
   if (value != last) {
     last = value;
@@ -83,7 +99,7 @@ void loop()
       setDecimals(0b00000000);
     }
     
-    showLED(value % 3);
+    showLED(value % 4);
   }
   
 }
@@ -94,7 +110,7 @@ void loop()
 
 void showLED(int whichOne)
 {
-  for(int i=0; i<3; i++) {
+  for(int i=0; i<4; i++) {
     if(i == whichOne)
     {
       digitalWrite(LEDArray[i], HIGH);
