@@ -170,7 +170,7 @@ void loop()
       modeSelect = 1; 
       showLED(0);
       clearDisplay();  // Clears display
-      setDecimals(0b000000);  // Turn on all options
+      setDecimals(0b000000);  // Turn off all options
     } // if(b == ClickEncoder::Held)
 
   } // End if/else for not isRunning
