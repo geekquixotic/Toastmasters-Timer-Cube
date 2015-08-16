@@ -94,14 +94,24 @@ void loop()
       }
     } else {
       
+      // Based on number of seconds,
+      // which LED should be on.
       if(accSecs < presets[0]) { 
-        showLED(0); 
-      } else if( (accSecs > presets[0]) && (accSecs < presets[1]) ) { 
-        showLED(1); 
-      } else if( (accSecs > presets[1]) && (accSecs < presets[2]) ) { 
-        showLED(2); 
-      } else if(accSecs > presets[2]) { 
-        showLED(3); 
+        showLED(0); // None
+        // WORKS!
+        minutes = presets[0] / 10;
+      } else if(accSecs < presets[1]) { 
+        showLED(1); // Green
+        // WORKS!
+        minutes = presets[1] / 10;
+      } else if(accSecs < presets[2]) { 
+        showLED(2); // Yellow
+        // DOESN'T WORK! NOTHING.
+        minutes = presets[2] / 10;
+      } else { 
+        showLED(3); // Red
+        // DOESN'T WORK. SHOWS ON YELLOW TIME
+        minutes = presets[2] / 10;
       }
     } // if(manualMode)
     
@@ -126,13 +136,23 @@ void loop()
         // Load timer presets
         switch(whichOne) {
           case 1: // Table Topics
-            memcpy(presets, tableTopics, 3);
+            //memcpy(presets, tableTopics, 3);
+            for(int i=0 ; i<3 ; i++) {
+              presets[i] = tableTopics[i];
+            }
             break;
           case 2: // Evaluation
-            memcpy(presets, evaluation, 3);
+            //memcpy(presets, evaluation, 3);
+            for(int i=0 ; i<3 ; i++) {
+              presets[i] = evaluation[i];
+            }
             break;
           case 3: // Standard Speech
-            memcpy(presets, stdSpeech, 3);
+            //memcpy(presets, stdSpeech, 3);
+            for(int i=0 ; i<3 ; i++) {
+              presets[i] = stdSpeech[i];
+            }
+
             break;
           default: // Manual
             manualMode = 1; // True
