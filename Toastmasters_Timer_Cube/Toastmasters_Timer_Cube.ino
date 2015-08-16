@@ -109,7 +109,9 @@ void loop()
     
     // Button stops and changes to control mode
     ClickEncoder::Button b = encoder->getButton();
-    if (b == ClickEncoder::Clicked) { isRunning = 0; }
+    if (b == ClickEncoder::Clicked) { 
+      isRunning = 0; 
+    }
     
     // Display Time
     sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
@@ -155,22 +157,21 @@ void loop()
 
     // Button starts timer
     ClickEncoder::Button b = encoder->getButton();
-    if (b == ClickEncoder::Clicked) 
-    { 
+    
+    if (b == ClickEncoder::Clicked) { 
       isRunning = 1;
+      modeSelect = 0;
       startTime = millis();
-    }
+    } // if (b == ClickEncoder::Clicked)
     
     // Resets on hold
-    if (b == ClickEncoder::Held) 
-    { 
+    if(b == ClickEncoder::Held) { 
       startTime = millis();
-      s7s.print("0000");
       modeSelect = 1; 
       showLED(0);
-        clearDisplay();  // Clears display
-        setDecimals(0b111111);  // Turn on all options
-    } 
+      clearDisplay();  // Clears display
+      setDecimals(0b000000);  // Turn on all options
+    } // if(b == ClickEncoder::Held)
 
   } // End if/else for not isRunning
 
