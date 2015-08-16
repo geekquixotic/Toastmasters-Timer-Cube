@@ -29,8 +29,11 @@ unsigned int counter = 0;  // This variable will count up to 65k
 char tempString[10];  // Will be used with sprintf to create strings
 
 // Other variables
-boolean Running = 0;
+boolean isRunning;
+boolean modeSelect;
+boolean manualMode;
 long startTime;
+int presets[3];
 
 void timerIsr() {
   encoder->service();
@@ -38,7 +41,7 @@ void timerIsr() {
 
 void setup()
 { 
-  // Create the lights
+  // Create the lights and turn them off
   pinMode(GREEN, OUTPUT);
   pinMode(YELLOW, OUTPUT);
   pinMode(RED, OUTPUT);
@@ -60,89 +63,108 @@ void setup()
   s7s.print("8888");  // Show all digit segments and...
   setDecimals(0b111111);  // Turn on all options
 
-  // Set initial Running state
-  Running = 0;
-
-  // Turn off the lights
-  showLED(0);
-
+  // Set initial isRunning state
+  isRunning = 0; // False
+  
+  // set modeSelect
+  modeSelect = 1; // True
 }
 
 void loop()
 {
   
-  // Check state (running or not)
-  if(Running)
+  // Check state (isRunning or not)
+  if(isRunning)
   {
     setDecimals(0b00010000);
     
-    long currentTime = millis();
     // Increment time
-    // If manual mode, knob changes LED
-    // If preset mode, use time presets
-    
-    // Button stops and changes to control mode
-    ClickEncoder::Button b = encoder->getButton();
-    if (b == ClickEncoder::Clicked) { Running = 0; }
-    
-    long accSecs = (currentTime - startTime) / 1000L;
+    long currentTime = millis();
+    long accSecs = (currentTime - startTime) / 100L;
     long minutes = accSecs / 60;
     long seconds = accSecs % 60;
 
+    // If manual mode, knob changes LED
+    // If preset mode, use time presets
+    if(manualMode) {
+      value += encoder->getValue();
+      int whichOne = abs(value)%4;
+      if (value != last) {
+        showLED(whichOne);
+      }
+    } else {
+      
+      if(accSecs < presets[0]) { 
+        showLED(0); 
+      } else if( (accSecs > presets[0]) && (accSecs < presets[1]) ) { 
+        showLED(1); 
+      } else if( (accSecs > presets[1]) && (accSecs < presets[2]) ) { 
+        showLED(2); 
+      } else if(accSecs > presets[2]) { 
+        showLED(3); 
+      }
+    } // if(manualMode)
+    
+    // Button stops and changes to control mode
+    ClickEncoder::Button b = encoder->getButton();
+    if (b == ClickEncoder::Clicked) { isRunning = 0; }
+    
+    // Display Time
     sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
-    //sprintf(tempString, "%04d", accSecs);
     s7s.print(tempString);
     
-    // Just putting in raw code to manually light the lights
-    value += encoder->getValue();
-    if (value != last) 
-    {
+
+  } else { // not isRunning
+
+    if(modeSelect) {      
+      value += encoder->getValue();
       int whichOne = abs(value)%4;
-      last = value;
-      showLED(whichOne);
-      
-      // Okay. This next bit is going to manually set the decimals
-      // on the display to indicate which LED is on.
-      // For now it's going to map the full bit stream for each.
-      // The next version should just turn on/off the bits that need
-      // to be changed each time.
-      // Note: This block isn't working. I'm leaving it in for now though.
-      switch(whichOne) {
-        case 1: // Green
-          setDecimals(0b00010100);
-          break;
-        case 2: // Yellow
-          setDecimals(0b00010010);
-          break;
-        case 3: // Red
-          setDecimals(0b00010001);
-          break;
-        default:
-          setDecimals(0b00011000);
-          break;
-      } // switch(whichOne)
-      
-    } // if (value != last) 
-
-  } else { // not running
-
-    // Knob controls mode (manual, TT, EV, SS)
-    // Load timer presets
+      if (value != last) {
+        manualMode = 0; // False
+        
+        // Knob controls mode (manual, TT, EV, SS)
+        // Load timer presets
+        switch(whichOne) {
+          case 1: // Table Topics
+            memcpy(presets, tableTopics, 3);
+            break;
+          case 2: // Evaluation
+            memcpy(presets, evaluation, 3);
+            break;
+          case 3: // Standard Speech
+            memcpy(presets, stdSpeech, 3);
+            break;
+          default: // Manual
+            manualMode = 1; // True
+            break;
+        } // switch(whichOne)
+        
+        // Display the option
+        s7s.print(myStrings[whichOne]);
+        
+      } //  if (value != last)
+    } // if(modeSelect)
 
     // Button starts timer
     ClickEncoder::Button b = encoder->getButton();
     if (b == ClickEncoder::Clicked) 
     { 
-      Running = 1;
+      isRunning = 1;
       startTime = millis();
     }
+    
     // Resets on hold
     if (b == ClickEncoder::Held) 
     { 
-      startTime = millis(); 
+      startTime = millis();
       s7s.print("0000");
-    }  
-  } // End if/else for not running
+      modeSelect = 1; 
+      showLED(0);
+        clearDisplay();  // Clears display
+        setDecimals(0b111111);  // Turn on all options
+    } 
+
+  } // End if/else for not isRunning
 
 }
 
@@ -191,20 +213,9 @@ void setDecimals(byte decimals)
   s7s.write(decimals);
 }
 
-void origDispLoop()
-{
-  // Magical sprintf creates a string for us to send to the s7s.
-  //  The %4d option creates a 4-digit integer.
-  sprintf(tempString, "%4d", counter);
-
-  // This will output the tempString to the S7S
-  s7s.print(tempString);
-  setDecimals(0b00000100);  // Sets digit 3 decimal on
-
-  counter++;  // Increment the counter
-  delay(100);  // This will make the display update at 10Hz.
-}
-
+// This block is here for reference only.
+// Once the code is complete and no longer needed
+// for reference, it can be deleted.
 void readButton()
 {
   ClickEncoder::Button b = encoder->getButton();
