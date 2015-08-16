@@ -63,17 +63,9 @@ void setup()
   // Set initial Running state
   Running = 0;
 
-  for(int x=1 ; x<4 ; x++) {
-     showLED(x);
-     delay(500);
-  }
+  // Turn off the lights
   showLED(0);
 
-  startTime = millis();
-  // Do as I say, not as I do
-  //delay(500); // This is just test code so we can see the display light up
-  //clearDisplay(); // Now let's get to work
-  
 }
 
 void loop()
@@ -88,6 +80,7 @@ void loop()
     // Increment time
     // If manual mode, knob changes LED
     // If preset mode, use time presets
+    
     // Button stops and changes to control mode
     ClickEncoder::Button b = encoder->getButton();
     if (b == ClickEncoder::Clicked) { Running = 0; }
@@ -104,15 +97,34 @@ void loop()
     value += encoder->getValue();
     if (value != last) 
     {
+      int whichOne = abs(value)%4;
       last = value;
-      showLED(abs(value)%4);
-    }
+      showLED(whichOne);
+      
+      // Okay. This next bit is going to manually set the decimals
+      // on the display to indicate which LED is on.
+      // For now it's going to map the full bit stream for each.
+      // The next version should just turn on/off the bits that need
+      // to be changed each time.
+      // Note: This block isn't working. I'm leaving it in for now though.
+      switch(whichOne) {
+        case 1: // Green
+          setDecimals(0b00010100);
+          break;
+        case 2: // Yellow
+          setDecimals(0b00010010);
+          break;
+        case 3: // Red
+          setDecimals(0b00010001);
+          break;
+        default:
+          setDecimals(0b00011000);
+          break;
+      } // switch(whichOne)
+      
+    } // if (value != last) 
 
-  } 
-
-  else 
-
-  { // not running
+  } else { // not running
 
     // Knob controls mode (manual, TT, EV, SS)
     // Load timer presets
@@ -130,27 +142,7 @@ void loop()
       startTime = millis(); 
       s7s.print("0000");
     }  
-  }
-
-/*  
-  // Test code below  
-  value += encoder->getValue();
-  if (value != last) {
-    last = value;
-  
-    int choice = value % 4;
-    //sprintf(tempString, "%4d", value);
-    //s7s.print(tempString);
-    s7s.print(myStrings[choice]);
-    if(value % 4 == 0) {
-      setDecimals(0b00010000);
-    } else {
-      setDecimals(0b00000000);
-    }
-    
-    showLED(value % 4);
-  }
-*/
+  } // End if/else for not running
 
 }
 
