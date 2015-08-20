@@ -1,3 +1,10 @@
+//
+// Toastmasters Timer Cube
+//
+// Chad Lawson <cdlawson@coldshadow.com>
+// Gabe Becker
+//
+
 #include <SoftwareSerial.h>
 #include <ClickEncoder.h>
 #include <TimerOne.h>
@@ -92,8 +99,7 @@ void loop()
       if (value != last) {
         showLED(whichOne);
       }
-    } else {
-      
+    } else {      
       // Based on number of seconds,
       // which LED should be on.
       if(accSecs < presets[0]) { 
@@ -104,7 +110,7 @@ void loop()
         showLED(2); // Yellow
       } else { 
         showLED(3); // Red
-      }
+      } // if(accSecs < presets[0])
     } // if(manualMode)
     
     // Button stops and changes to control mode
@@ -128,6 +134,9 @@ void loop()
         
         // Knob controls mode (manual, TT, EV, SS)
         // Load timer presets
+        // TODO: Need to pull all the loops out into
+        // a function call. Probably passing the presets
+        // variable by reference.
         switch(whichOne) {
           case 1: // Table Topics
             for(int i=0 ; i<3 ; i++) {
@@ -156,15 +165,12 @@ void loop()
     } // if(modeSelect)
 
     // Button starts timer
+    // TODO: This is the second use of this line.
+    // It should be moved to the top to have it only
+    // executed once and then referenced from there.
     ClickEncoder::Button b = encoder->getButton();
     
-    if (b == ClickEncoder::Clicked) { 
-      isRunning = 1;
-      modeSelect = 0;
-      startTime = millis();
-    } // if (b == ClickEncoder::Clicked)
-    
-    // Resets on hold
+    // Resets on Hold
     if(b == ClickEncoder::Held) { 
       startTime = millis();
       modeSelect = 1; 
@@ -172,6 +178,14 @@ void loop()
       clearDisplay();  // Clears display
       setDecimals(0b000000);  // Turn off all options
     } // if(b == ClickEncoder::Held)
+
+    // Start Timer on Click
+    if (b == ClickEncoder::Clicked) { 
+      isRunning = 1;
+      modeSelect = 0;
+      startTime = millis();
+    } // if (b == ClickEncoder::Clicked)
+    
 
   } // End if/else for not isRunning
 
