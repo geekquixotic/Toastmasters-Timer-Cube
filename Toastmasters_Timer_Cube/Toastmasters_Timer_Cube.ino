@@ -29,7 +29,7 @@ const char* myStrings[]={"0000", "1  2", "2  3", "5  7"};
 
 // Initiate Encoder
 ClickEncoder *encoder;
-int16_t last, value;
+int16_t value;
 
 // These are the Arduino pins required to create a software serial
 //  instance. We'll actually only use the TX pin.
@@ -45,13 +45,13 @@ boolean isRunning;
 boolean modeSelect;
 boolean manualMode;
 long startTime;
+int whichOne;
 
 void timerIsr() {
   encoder->service();
 }
 
-void setup()
-{ 
+void setup() { 
   // Create the lights and turn them off
   pinMode(GREEN, OUTPUT);
   pinMode(YELLOW, OUTPUT);
@@ -65,7 +65,6 @@ void setup()
   encoder = new ClickEncoder(A2, A1, A0, 4);
   Timer1.initialize(1000);
   Timer1.attachInterrupt(timerIsr);   
-  last = -1;
   
   // Setup the display over serial
   s7s.begin(9600);
@@ -107,22 +106,22 @@ void loop() {
   } // switch(b)
     
   // Check state (isRunning or not)
-  if(isRunning)
-  {
+  if(isRunning) {
     // Increment time
     long currentTime = millis();
     long accSecs = (currentTime - startTime) / 1000L;
     long minutes = accSecs / 60;
     long seconds = accSecs % 60;
+    
+    // Display Time
+    sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
+    s7s.print(tempString);
 
     // If manual mode, knob changes LED
     // If preset mode, use time presets
     if(manualMode) {
-      value += encoder->getValue();
-      int whichOne = abs(value)%4; // TODO: Clear up this repeated bit
-      if (value != last) {
-        showLED(whichOne);
-      }
+      whichOne = readEncoder();
+      showLED(whichOne);
     } else { // Using presets
       // Based on number of seconds,
       // which LED should be on.
@@ -137,35 +136,30 @@ void loop() {
       } // if(accSecs < presets[0])
     } // if(manualMode)
     
-    // Display Time
-    sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
-    s7s.print(tempString);
+  } else { // if(isRunning)
 
-  } else { // not isRunning
-
-    if(modeSelect) {      
-      value += encoder->getValue();
-      int whichOne = abs(value)%4; // TODO: There are too many of this line doing abs/mod math
-      if (value != last) {
+    if(modeSelect) {
+      
+      // Get the value
+      whichOne = readEncoder();      
         
-        // Knob controls mode (manual, TT, EV, SS)
-        // Load timer presets
-        if(whichOne == 0) {
-          manualMode = 1;
-          setDecimals(0b00010000); // Turn on the colon
-        } else {
-          manualMode = 0;
-          whichPreset = whichOne;
-          setDecimals(0b00000000); // All off
-        }
-        
-        // Display the option
-        s7s.print(myStrings[whichOne]);
-        
-      } //  if (value != last)
+      // Knob controls mode (manual, TT, EV, SS)
+      // Load timer presets
+      if(whichOne == 0) {
+        manualMode = 1;
+        setDecimals(0b00010000); // Turn on the colon
+      } else {
+        manualMode = 0;
+        whichPreset = whichOne;
+        setDecimals(0b00000000); // All off
+      } // if(whichOne == 0)
+      
+      // Display the option
+      s7s.print(myStrings[whichOne]);
+      
     } // if(modeSelect)
 
-  } // End if/else for not isRunning
+  } // if(isRunning)
 
 } // LOOP
 
@@ -203,6 +197,15 @@ void showLED(int whichOne) {
   
 } // showLED
 
+int readEncoder() {
+  value += encoder->getValue();
+  
+  if(value > 3) { value = 3; }
+  if(value < 0) { value = 0; }
+  
+  return value;
+}
+
 // Send the clear display command (0x76)
 //  This will clear the display and reset the cursor
 void clearDisplay() {
@@ -226,26 +229,3 @@ void setDecimals(byte decimals) {
   s7s.write(0x77);
   s7s.write(decimals);
 } // setDecimals
-
-// This block is here for reference only.
-// Once the code is complete and no longer needed
-// for reference, it can be deleted.
-void readButton() {
-  ClickEncoder::Button b = encoder->getButton();
-  if (b != ClickEncoder::Open) {
-    Serial.print("Button: ");
-    #define VERBOSECASE(label) case label: Serial.println(#label); break;
-    switch (b) {
-      VERBOSECASE(ClickEncoder::Pressed);
-      VERBOSECASE(ClickEncoder::Held)
-      VERBOSECASE(ClickEncoder::Released)
-      VERBOSECASE(ClickEncoder::Clicked)
-      case ClickEncoder::DoubleClicked:
-          Serial.println("ClickEncoder::DoubleClicked");
-          encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
-          Serial.print("  Acceleration is ");
-          Serial.println((encoder->getAccelerationEnabled()) ? "enabled" : "disabled");
-        break;
-    } // switch (b) {
-  } // if (b != ClickEncoder::Open) {
-} // readButton
