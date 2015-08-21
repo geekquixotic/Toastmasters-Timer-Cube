@@ -16,11 +16,16 @@
 #define NULL 11 // Nothing on the pin, but only to be position zero in the arrray
 
 // Define automatic time limits (in seconds)
-const int tableTopics[3] = {60, 90, 120};
-const int evaluation[3] = {120, 150, 180};
-const int stdSpeech[3] = {300, 360, 420};
+const int presets[4][3] = {
+  {0, 0, 0},        // Null. Just holding for manual mode.
+  {60, 90, 120},    // Table Topics
+  {120, 150, 180},  // Evaluation
+  {300, 360, 420}   // Standard Speech
+};
+int whichPreset = 0; // Index of which preset based on mode
 const int LEDArray[4] = {NULL, GREEN, YELLOW, RED};
-const char* myStrings[]={"0000", "1--2", "2--3", "5--7"};
+//const char* myStrings[]={"0000", "1--2", "2--3", "5--7"};
+const char* myStrings[]={"0000", "1  2", "2  3", "5  7"};
 
 // Initiate Encoder
 ClickEncoder *encoder;
@@ -40,7 +45,6 @@ boolean isRunning;
 boolean modeSelect;
 boolean manualMode;
 long startTime;
-int presets[3];
 
 void timerIsr() {
   encoder->service();
@@ -75,16 +79,36 @@ void setup()
   
   // set modeSelect
   modeSelect = 1; // True
-}
+} // SETUP
 
-void loop()
-{
+void loop() {
   
+  // Check the Button
+  ClickEncoder::Button b = encoder->getButton();
+  switch(b) {
+    case ClickEncoder::Held: // Reset
+      startTime = millis();
+      modeSelect = 1; 
+      //clearDisplay();  // Clears display
+      //setDecimals(0b000000);  // Turn off all options
+      break;
+       
+    case ClickEncoder::Clicked: // Start & Stop
+      if(isRunning) { // Stop
+        isRunning = 0;
+        showLED(0); 
+      } else { // Start
+        isRunning = 1;
+        modeSelect = 0;
+        startTime = millis();
+        setDecimals(0b00010000);
+      } // if(isRunning)
+      break;
+  } // switch(b)
+    
   // Check state (isRunning or not)
   if(isRunning)
   {
-    setDecimals(0b00010000);
-    
     // Increment time
     long currentTime = millis();
     long accSecs = (currentTime - startTime) / 100L;
@@ -95,68 +119,45 @@ void loop()
     // If preset mode, use time presets
     if(manualMode) {
       value += encoder->getValue();
-      int whichOne = abs(value)%4;
+      int whichOne = abs(value)%4; // TODO: Clear up this repeated bit
       if (value != last) {
         showLED(whichOne);
       }
-    } else {      
+    } else { // Using presets
       // Based on number of seconds,
       // which LED should be on.
-      if(accSecs < presets[0]) { 
+      if(accSecs < presets[whichPreset][0]) { 
         showLED(0); // None
-      } else if(accSecs < presets[1]) { 
+      } else if(accSecs < presets[whichPreset][1]) { 
         showLED(1); // Green
-      } else if(accSecs < presets[2]) { 
+      } else if(accSecs < presets[whichPreset][2]) { 
         showLED(2); // Yellow
       } else { 
         showLED(3); // Red
       } // if(accSecs < presets[0])
     } // if(manualMode)
     
-    // Button stops and changes to control mode
-    ClickEncoder::Button b = encoder->getButton();
-    if (b == ClickEncoder::Clicked) { 
-      isRunning = 0; 
-    }
-    
     // Display Time
     sprintf(tempString, "%02d%02d", (int)minutes, (int)seconds);
     s7s.print(tempString);
-    
 
   } else { // not isRunning
 
     if(modeSelect) {      
       value += encoder->getValue();
-      int whichOne = abs(value)%4;
+      int whichOne = abs(value)%4; // TODO: There are too many of this line doing abs/mod math
       if (value != last) {
-        manualMode = 0; // False
         
         // Knob controls mode (manual, TT, EV, SS)
         // Load timer presets
-        // TODO: Need to pull all the loops out into
-        // a function call. Probably passing the presets
-        // variable by reference.
-        switch(whichOne) {
-          case 1: // Table Topics
-            for(int i=0 ; i<3 ; i++) {
-              presets[i] = tableTopics[i];
-            }
-            break;
-          case 2: // Evaluation
-            for(int i=0 ; i<3 ; i++) {
-              presets[i] = evaluation[i];
-            }
-            break;
-          case 3: // Standard Speech
-            for(int i=0 ; i<3 ; i++) {
-              presets[i] = stdSpeech[i];
-            }
-            break;
-          default: // Manual
-            manualMode = 1; // True
-            break;
-        } // switch(whichOne)
+        if(whichOne == 0) {
+          manualMode = 1;
+          setDecimals(0b00010000); // Turn on the colon
+        } else {
+          manualMode = 0;
+          whichPreset = whichOne;
+          setDecimals(0b00000000); // All off
+        }
         
         // Display the option
         s7s.print(myStrings[whichOne]);
@@ -164,83 +165,72 @@ void loop()
       } //  if (value != last)
     } // if(modeSelect)
 
-    // Button starts timer
-    // TODO: This is the second use of this line.
-    // It should be moved to the top to have it only
-    // executed once and then referenced from there.
-    ClickEncoder::Button b = encoder->getButton();
-    
-    // Resets on Hold
-    if(b == ClickEncoder::Held) { 
-      startTime = millis();
-      modeSelect = 1; 
-      showLED(0);
-      clearDisplay();  // Clears display
-      setDecimals(0b000000);  // Turn off all options
-    } // if(b == ClickEncoder::Held)
-
-    // Start Timer on Click
-    if (b == ClickEncoder::Clicked) { 
-      isRunning = 1;
-      modeSelect = 0;
-      startTime = millis();
-    } // if (b == ClickEncoder::Clicked)
-    
-
   } // End if/else for not isRunning
 
-}
+} // LOOP
 
 ////////////////
 // Functions //
 ///////////////
 
-void showLED(int whichOne)
-{
+void showLED(int whichOne) {
+  
+  // Light the right LED and turn off the others
   for(int i=0; i<4; i++) {
-    if(i == whichOne)
-    {
+    if(i == whichOne) {
       digitalWrite(LEDArray[i], HIGH);
-    } 
-    else
-    {
+    } else {
       digitalWrite(LEDArray[i], LOW);
-    }
-  }
-}
+    } // if
+  } // for
+  
+  // Light the correct decimal on the front
+  // to match the LED
+  switch(whichOne) {
+    case 0:
+      setDecimals(0b00010000);
+      break;
+    case 1:
+      setDecimals(0b00010001);
+      break;
+    case 2:
+      setDecimals(0b00010010);
+      break;
+    case 3:
+      setDecimals(0b00010100);
+      break;
+  } // switch(whichOne)
+  
+} // showLED
 
 // Send the clear display command (0x76)
 //  This will clear the display and reset the cursor
-void clearDisplay()
-{
+void clearDisplay() {
   s7s.write(0x76);  // Clear display command
-}
+} // void clearDisplay
 
 // Set the displays brightness. Should receive byte with the value
 //  to set the brightness to
 //  dimmest------------->brightest
 //     0--------127--------255
-void setBrightness(byte value)
-{
+void setBrightness(byte value) {
   s7s.write(0x7A);  // Set brightness command byte
   s7s.write(value);  // brightness data byte
-}
+} // setBrightness
 
 // Turn on any, none, or all of the decimals.
 //  The six lowest bits in the decimals parameter sets a decimal 
 //  (or colon, or apostrophe) on or off. A 1 indicates on, 0 off.
 //  [MSB] (X)(X)(Apos)(Colon)(Digit 4)(Digit 3)(Digit2)(Digit1)
-void setDecimals(byte decimals)
-{
+void setDecimals(byte decimals) {
   s7s.write(0x77);
   s7s.write(decimals);
-}
+} // setDecimals
 
 // This block is here for reference only.
 // Once the code is complete and no longer needed
 // for reference, it can be deleted.
-void readButton()
-{
+void readButton() {
   ClickEncoder::Button b = encoder->getButton();
   if (b != ClickEncoder::Open) {
     Serial.print("Button: ");
@@ -258,4 +248,4 @@ void readButton()
         break;
     } // switch (b) {
   } // if (b != ClickEncoder::Open) {
-}
+} // readButton
