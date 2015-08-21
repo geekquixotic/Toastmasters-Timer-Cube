@@ -22,7 +22,6 @@ const int presets[4][3] = {
   {120, 150, 180},  // Evaluation
   {300, 360, 420}   // Standard Speech
 };
-int whichPreset = 0; // Index of which preset based on mode
 const int LEDArray[4] = {NULL, GREEN, YELLOW, RED};
 //const char* myStrings[]={"0000", "1--2", "2--3", "5--7"};
 const char* myStrings[]={"0000", "1  2", "2  3", "5  7"};
@@ -45,7 +44,9 @@ boolean isRunning;
 boolean modeSelect;
 boolean manualMode;
 long startTime;
-int whichOne;
+int whichLED;
+int whichMode;
+int whichPreset = 0; // Index of which preset based on mode
 
 void timerIsr() {
   encoder->service();
@@ -120,8 +121,8 @@ void loop() {
     // If manual mode, knob changes LED
     // If preset mode, use time presets
     if(manualMode) {
-      whichOne = readEncoder();
-      showLED(whichOne);
+      whichLED = readEncoder();
+      showLED(whichLED);
     } else { // Using presets
       // Based on number of seconds,
       // which LED should be on.
@@ -141,21 +142,21 @@ void loop() {
     if(modeSelect) {
       
       // Get the value
-      whichOne = readEncoder();      
+      whichMode = readEncoder();      
         
       // Knob controls mode (manual, TT, EV, SS)
       // Load timer presets
-      if(whichOne == 0) {
+      if(whichMode == 0) {
         manualMode = 1;
         setDecimals(0b00010000); // Turn on the colon
       } else {
         manualMode = 0;
-        whichPreset = whichOne;
+        whichPreset = whichMode;
         setDecimals(0b00000000); // All off
-      } // if(whichOne == 0)
+      } // if(whichMode == 0)
       
       // Display the option
-      s7s.print(myStrings[whichOne]);
+      s7s.print(myStrings[whichMode]);
       
     } // if(modeSelect)
 
