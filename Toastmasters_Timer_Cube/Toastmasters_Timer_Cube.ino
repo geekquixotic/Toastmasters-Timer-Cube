@@ -111,7 +111,7 @@ void loop() {
   {
     // Increment time
     long currentTime = millis();
-    long accSecs = (currentTime - startTime) / 100L;
+    long accSecs = (currentTime - startTime) / 1000L;
     long minutes = accSecs / 60;
     long seconds = accSecs % 60;
 
